@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Number Square Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Square Calculator</h1>
+    <form id="calculatorForm">
+        <input type="number" id="numberInput" placeholder="Enter a number" required>
+        <button type="submit">Calculate Square</button>
+    </form>
+    <div id="result" class="result"></div>
+
+    <script>
+        document.getElementById('calculatorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const number = document.getElementById('numberInput').value;
+            
+            try {
+                const response = await fetch(`http://localhost:8081/api/square?number=${number}`);
+                const data = await response.json();
+                document.getElementById('result').textContent = `The square of ${number} is ${data.result}`;
+            } catch (error) {
+                document.getElementById('result').textContent = 'Error calculating square';
+            }
+        });
+    </script>
+</body>
+</html>
