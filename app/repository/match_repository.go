@@ -12,11 +12,16 @@ import (
 
 type IMatchRepository interface {
 	GenerateFixtures(league models.League) ([]models.Match, error)
+	GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error)
+	GetMatchesByLeagueId(leagueID uint) ([]models.Match, error)
+	SaveMatch(match models.Match) error
 }
 
 type MatchRepository struct {
 	db *gorm.DB
 }
+
+var _ IMatchRepository = &MatchRepository{}
 
 func NewMatchRepository() *MatchRepository {
 	return &MatchRepository{
@@ -112,4 +117,42 @@ func getMatchKey(teamA, teamB string) string {
 		return teamA + "-" + teamB
 	}
 	return teamB + "-" + teamA
+}
+
+func (r *MatchRepository) GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error) {
+	var matches []models.Match
+	if err := r.db.Where("league_id = ? AND week = ?", leagueID, week).Find(&matches).Error; err != nil {
+		return nil, fmt.Errorf("failed to get matches for league %d and week %d: %w", leagueID, week, err)
+	}
+	return matches, nil
+}
+func (r *MatchRepository) GetMatchesByLeagueId(leagueID uint) ([]models.Match, error) {
+	var matches []models.Match
+	if err := r.db.Where("league_id = ?", leagueID).Find(&matches).Error; err != nil {
+		return nil, fmt.Errorf("failed to get matches for league %d: %w", leagueID, err)
+	}
+	return matches, nil
+}
+
+func (r *MatchRepository) SaveMatch(match models.Match) error {
+	// Find the match in the database
+	var existingMatch models.Match
+	if err := r.db.First(&existingMatch, match.ID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return fmt.Errorf("match with ID %d not found: %w", match.ID, err)
+		}
+		return fmt.Errorf("failed to find match with ID %d: %w", match.ID, err)
+	}
+
+	// Update the match state
+	existingMatch.HomeScore = match.HomeScore
+	existingMatch.AwayScore = match.AwayScore
+	existingMatch.Played = true
+	existingMatch.Result = match.Result
+
+	if err := r.db.Save(&existingMatch).Error; err != nil {
+		return fmt.Errorf("failed to update match with ID %d: %w", match.ID, err)
+	}
+
+	return nil
 }

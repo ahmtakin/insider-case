@@ -13,6 +13,8 @@ type ILeagueRepository interface {
 	CreateLeague(league *models.League) (*models.League, error)
 	GetLeagueByID(id uint) (*models.League, error)
 	InitializeLeague(league *models.League) (*models.League, error)
+	IncrementWeek(leagueID uint) (*models.League, error)
+	GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error)
 }
 
 type LeagueRepository struct {
@@ -73,7 +75,8 @@ func (r *LeagueRepository) InitializeLeague(league *models.League) (*models.Leag
 		leagueToCreate := &models.League{
 			Name:      league.Name,
 			TeamCount: league.TeamCount,
-			MaxWeeks:  helpers.CalculateMaxWeeks(league.TeamCount)}
+			MaxWeeks:  helpers.CalculateMaxWeeks(league.TeamCount),
+			CurrWeek:  1}
 
 		if err := tx.Create(leagueToCreate).Error; err != nil {
 			return fmt.Errorf("failed to create league: %w", err)
@@ -114,4 +117,27 @@ func (r *LeagueRepository) InitializeLeague(league *models.League) (*models.Leag
 		createdLeague.ID, createdLeague.Name, len(createdLeague.Teams))
 
 	return createdLeague, nil
+}
+func (r *LeagueRepository) IncrementWeek(leagueID uint) (*models.League, error) {
+	var league models.League
+	if err := r.db.First(&league, leagueID).Error; err != nil {
+		return nil, fmt.Errorf("failed to find league with ID %d: %w", leagueID, err)
+	}
+
+	// Increment the current week
+	league.CurrWeek++
+	if err := r.db.Save(&league).Error; err != nil {
+		return nil, fmt.Errorf("failed to increment week for league %d: %w", leagueID, err)
+	}
+
+	fmt.Printf("League week incremented: id=%d, new week=%d\n", league.ID, league.CurrWeek)
+
+	return &league, nil
+}
+func (r *LeagueRepository) GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error) {
+	var matches []models.Match
+	if err := r.db.Where("league_id = ? AND week = ?", leagueID, week).Find(&matches).Error; err != nil {
+		return nil, fmt.Errorf("failed to get matches for league %d and week %d: %w", leagueID, week, err)
+	}
+	return matches, nil
 }

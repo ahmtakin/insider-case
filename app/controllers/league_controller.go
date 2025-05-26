@@ -3,6 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"insider-case/app/dto"
 	"insider-case/app/services"
@@ -31,4 +32,27 @@ func (lc *LeagueController) CreateLeague(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (lc *LeagueController) SimulateWeek(w http.ResponseWriter, r *http.Request) {
+	leagueIDStr := r.URL.Query().Get("leagueID")
+	if leagueIDStr == "" {
+		http.Error(w, "leagueID is required", http.StatusBadRequest)
+		return
+	}
+
+	leagueID, err := strconv.ParseUint(leagueIDStr, 10, 32)
+	if err != nil {
+		http.Error(w, "Invalid league ID", http.StatusBadRequest)
+		return
+	}
+
+	week, err := lc.service.SimulateWeek(uint(leagueID))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(week)
 }

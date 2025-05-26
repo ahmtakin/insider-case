@@ -10,15 +10,20 @@ import (
 
 type ILeagueService interface {
 	InitializeLeague(req dto.LeagueCreateRequest) (*dto.LeagueResponse, error)
+	SimulateWeek(leagueID uint) (*dto.Week, error)
 }
 
 type LeagueService struct {
 	repo repository.ILeagueRepository
+	matchService IMatchService
 }
 
-func NewLeagueService(repo repository.ILeagueRepository) *LeagueService {
+var _ ILeagueService = &LeagueService{}
+
+func NewLeagueService(repo repository.ILeagueRepository, matchService IMatchService) *LeagueService {
 	return &LeagueService{
 		repo: repo,
+		matchService: matchService,
 	}
 }
 
@@ -73,6 +78,7 @@ func convertToLeagueResponse(league *models.League) *dto.LeagueResponse {
 	for i, team := range league.Teams {
 		response.Teams[i] = models.Team{
 			ID:       team.ID,
+			LeagueID: team.LeagueID,
 			Name:     team.Name,
 			Strength: team.Strength,
 			Stats:    team.Stats,
@@ -81,6 +87,7 @@ func convertToLeagueResponse(league *models.League) *dto.LeagueResponse {
 	for i, match := range league.Matches {
 		response.Matches[i] = models.Match{
 			ID:         match.ID,
+			LeagueID:   match.LeagueID,
 			Week:       match.Week,
 			HomeTeamID: match.HomeTeamID,
 			AwayTeamID: match.AwayTeamID,
@@ -91,4 +98,38 @@ func convertToLeagueResponse(league *models.League) *dto.LeagueResponse {
 	}
 
 	return response
+}
+
+func (s *LeagueService) SimulateWeek(leagueID uint) (*dto.Week, error) {
+	league, err := s.repo.GetLeagueByID(leagueID)
+	// Get matches for the current week
+	matches, err := s.repo.GetMatchesByLeagueIdAndWeek(leagueID, league.CurrWeek)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get matches for league %d and week %d: %w", leagueID, league.CurrWeek, err)
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no matches found for league %d and week %d", leagueID, league.CurrWeek)
+	}
+
+	// Play all matches for the current week
+	for _, match := range matches {
+		if !match.Played {
+			if err := s.matchService.SimulateMatch(match); err != nil {
+				return nil, fmt.Errorf("failed to play match %d: %w", match.ID, err)
+			}
+		}
+	}
+
+	// Increment the league week
+	updatedLeague, err := s.repo.IncrementWeek(leagueID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to increment league week: %w", err)
+	}
+
+	return &dto.Week{
+		LeagueID: updatedLeague.ID,
+		Week:     updatedLeague.CurrWeek,
+		Matches:  matches,
+	}, nil
 }

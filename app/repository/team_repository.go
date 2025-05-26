@@ -11,11 +11,16 @@ import (
 type ITeamRepository interface {
 	ValidateTeams(teams []models.Team, expectedCount int) error
 	CreateTeams(tx *gorm.DB, teams []models.Team, leagueID uint) error
+	GetTeamsByLeagueID(leagueID uint) ([]models.Team, error)
+	GetTeamByID(TeamID uint) (models.Team, error)
+	GetTeamStrengthByID(TeamID uint) (int, error)
 }
 
 type TeamRepository struct {
 	db *gorm.DB
 }
+
+var _ ITeamRepository = &TeamRepository{}
 
 func NewTeamRepository() *TeamRepository {
 	return &TeamRepository{
@@ -52,4 +57,34 @@ func (r *TeamRepository) CreateTeams(tx *gorm.DB, teams []models.Team, leagueID 
 	}
 
 	return nil
+}
+
+func (r *TeamRepository) GetTeamsByLeagueID(leagueID uint) ([]models.Team, error) {
+	var teams []models.Team
+	if err := r.db.Where("league_id = ?", leagueID).Find(&teams).Error; err != nil {
+		return nil, fmt.Errorf("failed to get teams for league %d: %w", leagueID, err)
+	}
+	return teams, nil
+}
+
+func (r *TeamRepository) GetTeamByID(TeamID uint) (models.Team, error) {
+	var team models.Team
+	if err := r.db.Where("id = ?", TeamID).First(&team).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return models.Team{}, fmt.Errorf("team with ID %d not found", TeamID)
+		}
+		return models.Team{}, fmt.Errorf("failed to get team by ID %d: %w", TeamID, err)
+	}
+	return team, nil
+}
+
+func (r *TeamRepository) GetTeamStrengthByID(TeamID uint) (int, error) {
+	var team models.Team
+	if err := r.db.Select("strength").Where("id = ?", TeamID).First(&team).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return 0, fmt.Errorf("team with ID %d not found", TeamID)
+		}
+		return 0, fmt.Errorf("failed to get team strength by ID %d: %w", TeamID, err)
+	}
+	return team.Strength, nil
 }
