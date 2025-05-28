@@ -1,42 +1,69 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Number Square Calculator</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 600px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        .result {
-            margin-top: 20px;
-            font-weight: bold;
-        }
-    </style>
+    <title>League Simulator</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Square Calculator</h1>
-    <form id="calculatorForm">
-        <input type="number" id="numberInput" placeholder="Enter a number" required>
-        <button type="submit">Calculate Square</button>
-    </form>
-    <div id="result" class="result"></div>
+    <div class="container">
+        <h1>League Simulator</h1>
 
-    <script>
-        document.getElementById('calculatorForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const number = document.getElementById('numberInput').value;
-            
-            try {
-                const response = await fetch(`http://localhost:8081/api/square?number=${number}`);
-                const data = await response.json();
-                document.getElementById('result').textContent = `The square of ${number} is ${data.result}`;
-            } catch (error) {
-                document.getElementById('result').textContent = 'Error calculating square';
-            }
-        });
-    </script>
+        <!-- League Setup Form -->
+        <section id="setup-section">
+            <h2>Create League</h2>
+            <form id="league-form">
+                <label>League Name: <input type="text" id="league-name" value="Super Final" required></label>
+                <label>Team Count: <input type="number" id="team-count" value="4" min="2" max="20" required></label>
+                <div id="teams-inputs"></div>
+                <button type="submit">Create League</button>
+            </form>
+        </section>
+
+        <!-- League Dashboard -->
+        <section id="dashboard" class="hidden">
+            <div class="grid">
+                <div class="left-panel">
+                    <h2>Team Stats</h2>
+                    <table id="team-stats-table"></table>
+
+                    <h3>Champion Predictions</h3>
+                    <div id="champion-predictions" class="horizontal-scroll"></div>
+                </div>
+
+                <div class="right-panel">
+                    <h2>All Matches</h2>
+                    <div id="all-matches"></div>
+                    <div id="pagination"></div>
+
+                    <div id="next-matches"></div>
+
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="simulate-week">Simulate Week</button>
+                <button id="manual-week">Manually Play Week</button>
+                <button id="play-all">Play All</button>
+            </div>
+        </section>
+
+        <!-- Modal for Manual Match Results -->
+        <div id="manual-week-modal" class="modal hidden">
+            <div class="modal-content">
+                <span id="close-modal" class="close-button">&times;</span>
+                <h2>Enter Match Results for Week <span id="current-week-display"></span></h2>
+                <form id="manual-week-form">
+                    <div id="match-results-container">
+                        <!-- Dynamic match inputs will be added here -->
+                    </div>
+                    <button type="submit">Submit Results</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
