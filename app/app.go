@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"insider-case/app/database"
 	"insider-case/config"
 	"log"
@@ -21,6 +22,7 @@ type App struct {
 
 // NewApp initializes a new App instance
 func (a *App) Initialize(c *config.Config) *App {
+	fmt.Println("Initilizing app...")
 	database.Connect(c)
 	database.MigrateAll()
 	db := database.GetDB()
@@ -30,6 +32,7 @@ func (a *App) Initialize(c *config.Config) *App {
 	}
 	return &App{
 		Database: db,
+		Router:   mux.NewRouter(),
 	}
 }
 

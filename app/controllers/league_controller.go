@@ -35,6 +35,63 @@ func (lc *LeagueController) CreateLeague(w http.ResponseWriter, r *http.Request)
 }
 
 func (lc *LeagueController) SimulateWeek(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		LeagueID uint `json:"leagueID"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	week, err := lc.service.SimulateWeek(req.LeagueID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(week)
+}
+
+func (lc *LeagueController) PlayRemainingMatches(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		LeagueID uint `json:"leagueID"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	weeks, err := lc.service.PlayRemainingMatches(req.LeagueID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(weeks)
+}
+
+func (lc *LeagueController) UserPlayWeek(w http.ResponseWriter, r *http.Request) {
+	var req []dto.UserPlayedMatch
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	match, err := lc.service.UserPlayWeek(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(match)
+}
+
+func (lc *LeagueController) GetChampionshipEstimations(w http.ResponseWriter, r *http.Request) {
 	leagueIDStr := r.URL.Query().Get("leagueID")
 	if leagueIDStr == "" {
 		http.Error(w, "leagueID is required", http.StatusBadRequest)
@@ -47,12 +104,12 @@ func (lc *LeagueController) SimulateWeek(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	week, err := lc.service.SimulateWeek(uint(leagueID))
+	estimations, err := lc.service.GetChampionshipEstimationByLeagueID(uint(leagueID))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(week)
+	json.NewEncoder(w).Encode(estimations)
 }

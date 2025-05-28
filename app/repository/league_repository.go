@@ -15,6 +15,9 @@ type ILeagueRepository interface {
 	InitializeLeague(league *models.League) (*models.League, error)
 	IncrementWeek(leagueID uint) (*models.League, error)
 	GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error)
+	GetRemainingMatches(leagueID uint, week int) ([]models.Match, error)
+	GetTeamRepository() ITeamRepository
+	GetTeamsByLeagueID(leagueID uint) ([]models.Team, error)
 }
 
 type LeagueRepository struct {
@@ -140,4 +143,24 @@ func (r *LeagueRepository) GetMatchesByLeagueIdAndWeek(leagueID uint, week int) 
 		return nil, fmt.Errorf("failed to get matches for league %d and week %d: %w", leagueID, week, err)
 	}
 	return matches, nil
+}
+
+func (r *LeagueRepository) GetRemainingMatches(leagueID uint, week int) ([]models.Match, error) {
+	var matches []models.Match
+	if err := r.db.Where("league_id = ? AND week > ?", leagueID, week).Find(&matches).Error; err != nil {
+		return nil, fmt.Errorf("failed to get remaining matches for league %d: %w", leagueID, err)
+	}
+	return matches, nil
+}
+
+func (r *LeagueRepository) GetTeamRepository() ITeamRepository {
+	return r.teamRepository
+}
+
+func (r *LeagueRepository) GetTeamsByLeagueID(leagueID uint) ([]models.Team, error) {
+	var teams []models.Team
+	if err := r.db.Where("league_id = ?", leagueID).Find(&teams).Error; err != nil {
+		return nil, fmt.Errorf("failed to get teams for league %d: %w", leagueID, err)
+	}
+	return teams, nil
 }

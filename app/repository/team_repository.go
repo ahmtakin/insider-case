@@ -79,12 +79,12 @@ func (r *TeamRepository) GetTeamByID(TeamID uint) (models.Team, error) {
 }
 
 func (r *TeamRepository) GetTeamStrengthByID(TeamID uint) (int, error) {
-	var team models.Team
-	if err := r.db.Select("strength").Where("id = ?", TeamID).First(&team).Error; err != nil {
+	var strength int
+	if err := r.db.Model(&models.Team{}).Select("strength").Where("id = ?", TeamID).Scan(&strength).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return 0, fmt.Errorf("team with ID %d not found", TeamID)
 		}
 		return 0, fmt.Errorf("failed to get team strength by ID %d: %w", TeamID, err)
 	}
-	return team.Strength, nil
+	return strength, nil
 }

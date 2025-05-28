@@ -28,6 +28,7 @@ func Connect(c *config.Config) {
 		log.Println("Connected to DB successfully")
 	}
 	DB = db
+	fmt.Println("Database connection established")
 }
 func Close() {
 	sqlDB, err := DB.DB()
@@ -43,7 +44,7 @@ func Close() {
 
 func GetDB() *gorm.DB {
 	if DB == nil {
-		log.Fatal("Database connection is not initialized")
+		log.Println("Database connection is not initialized!!")
 	}
 	return DB
 }

@@ -2,8 +2,11 @@ package services
 
 import (
 	"fmt"
+	"insider-case/app/dto"
 	"insider-case/app/models"
 	"insider-case/app/repository"
+
+	"insider-case/app/utils"
 	"math/rand"
 	"time"
 )
@@ -13,8 +16,9 @@ const homeAdvantageMultiplier = 1.1 // 10% advantage to home team
 type IMatchService interface {
 	GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error)
 	GetMatchesByLeagueId(leagueID uint) ([]models.Match, error)
-	PlayMatch(match models.Match) error
-	SimulateMatch(match models.Match) error
+	// PlayMatch(match models.Match) error
+	SimulateMatch(match models.Match) (models.Match, error)
+	UserPlayMatch(week dto.UserPlayedMatch) (models.Match, error)
 }
 
 type MatchService struct {
@@ -62,21 +66,6 @@ func (s *MatchService) GetMatchesByLeagueId(leagueID uint) ([]models.Match, erro
 	return matches, nil
 }
 
-func (s *MatchService) PlayMatch(match models.Match) error {
-	fmt.Println("Playing match:", match.ID, "between teams:", match.HomeTeamID, "and", match.AwayTeamID)
-
-	if err := s.matchRepo.SaveMatch(match); err != nil {
-		return fmt.Errorf("failed to play match %d: %w", match.ID, err)
-	}
-
-	// Update team stats after match
-	if err := s.updateTeamStats(match); err != nil {
-		return fmt.Errorf("failed to update team stats for match %d: %w", match.ID, err)
-	}
-
-	return nil
-}
-
 func (s *MatchService) updateTeamStats(match models.Match) error {
 	homeTeamStats, err := s.teamStatsRepo.GetTeamStatsByTeamID(match.HomeTeamID)
 	if err != nil {
@@ -113,39 +102,43 @@ func (s *MatchService) updateTeamStats(match models.Match) error {
 	awayTeamStats.GoalsFor += match.AwayScore
 	homeTeamStats.GoalsAgainst += match.AwayScore
 	awayTeamStats.GoalsAgainst += match.HomeScore
-	homeTeamStats.GoalDiff += homeTeamStats.GoalsFor - homeTeamStats.GoalsAgainst
-	awayTeamStats.GoalDiff += awayTeamStats.GoalsFor - awayTeamStats.GoalsAgainst
+	homeTeamStats.GoalDiff += match.HomeScore - match.AwayScore
+	awayTeamStats.GoalDiff += match.AwayScore - match.HomeScore
 
-	//if match.Week >3 estimation logic here
 	s.teamStatsRepo.UpdateTeamStats(homeTeamStats)
 	s.teamStatsRepo.UpdateTeamStats(awayTeamStats)
 
 	return nil
 }
 
-func (s *MatchService) SimulateMatch(match models.Match) error {
+func (s *MatchService) SimulateMatch(match models.Match) (models.Match, error) {
 	// Seed the RNG
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	fmt.Println("Simulating match:", match.ID, "between teams:", match.HomeTeamID, "and", match.AwayTeamID)
 
-	intHomeStrength, err := s.teamRepo.GetTeamStrengthByID(match.HomeTeamID)
+	homeTeam, err := s.teamRepo.GetTeamByID(match.HomeTeamID)
 	if err != nil {
-		return fmt.Errorf("failed to get home team strength: %w", err)
+		return match, fmt.Errorf("failed to get home team %d: %w", match.HomeTeamID, err)
 	}
-	// If away team is nil, return an error
-	intAwayStrength, err := s.teamRepo.GetTeamStrengthByID(match.AwayTeamID)
+	awayTeam, err := s.teamRepo.GetTeamByID(match.AwayTeamID)
 	if err != nil {
-		return fmt.Errorf("failed to get away team strength: %w", err)
+		return match, fmt.Errorf("failed to get away team %d: %w", match.AwayTeamID, err)
 	}
-	homeStrength := float64(intHomeStrength) * homeAdvantageMultiplier
-	// Adjust strength with home advantage
-	awayStrength := float64(intAwayStrength)
+	teams := append([]models.Team{}, homeTeam, awayTeam)
+	teamStats, err := s.teamStatsRepo.GetTeamStatsByLeagueID(match.LeagueID)
+	if err != nil {
+		return match, fmt.Errorf("failed to get team stats for league %d: %w", match.LeagueID, err)
+	}
+	formFactor := utils.CalculateFormFactor(teams, teamStats, match.HomeTeamID)
+	if formFactor <= 0 {
+		formFactor = 1.0 // Default form factor if calculation fails
+	}
 
 	// Total strength for probability calculations
-	totalStrength := homeStrength + awayStrength
+	totalStrength := (float64(homeTeam.Strength) * homeAdvantageMultiplier * formFactor) + float64(awayTeam.Strength)
 
 	// Compute win probabilities
-	homeWinChance := homeStrength / totalStrength
+	homeWinChance := float64(homeTeam.Strength) / totalStrength * 0.8
 	drawChance := 0.2 // fixed draw chance
 
 	// Simulate match result
@@ -154,31 +147,59 @@ func (s *MatchService) SimulateMatch(match models.Match) error {
 	var homeGoals, awayGoals int
 	switch {
 	case outcome < homeWinChance:
-		homeGoals = rand.Intn(3) + 1// 1 to 3
-		awayGoals = rand.Intn(3)     // 0 to 1
-		match.Result = &match.HomeTeamID
+		homeGoals = r.Intn(3) + 1 // 1 to 3
+		awayGoals = r.Intn(3)     // 0 to 1
 	case outcome < homeWinChance+drawChance:
-		goals := rand.Intn(3) // 0 to 2
+		goals := r.Intn(3) // 0 to 2
 		homeGoals = goals
 		awayGoals = goals
-		match.Result = nil // 0 indicates a draw
 	default:
-		awayGoals = rand.Intn(3) + 1  // 1 to 3
-		homeGoals = rand.Intn(3)     // 0 to 1
-		match.Result = &match.AwayTeamID
+		awayGoals = r.Intn(3) + 1 // 1 to 3
+		homeGoals = r.Intn(3)     // 0 to 1
 	}
+	s.setMatchWinner(&match)
 
 	match.HomeScore = homeGoals
 	match.AwayScore = awayGoals
 	match.Played = true
 
 	if err := s.matchRepo.SaveMatch(match); err != nil {
-		return fmt.Errorf("failed to play match %d: %w", match.ID, err)
+		return match, fmt.Errorf("failed to save simulated match %d: %w", match.ID, err)
 	}
 	if err := s.updateTeamStats(match); err != nil {
-		return fmt.Errorf("failed to update team stats for match %d: %w", match.ID, err)
+		return match, fmt.Errorf("failed to update team stats for match %d: %w", match.ID, err)
 	}
 
-	return nil
+	return match, nil
 
+}
+func (s *MatchService) UserPlayMatch(match dto.UserPlayedMatch) (models.Match, error) {
+	existingMatch, err := s.matchRepo.GetMatchByID(match.MatchID)
+	if err != nil {
+		return models.Match{}, fmt.Errorf("failed to get match %d: %w", match.MatchID, err)
+	}
+	if existingMatch == nil {
+		return models.Match{}, fmt.Errorf("match with ID %d not found", match.MatchID)
+	}
+	existingMatch.HomeScore = match.HomeScore
+	existingMatch.AwayScore = match.AwayScore
+	existingMatch.Played = true
+	s.setMatchWinner(existingMatch)
+	if err := s.matchRepo.SaveMatch(*existingMatch); err != nil {
+		return models.Match{}, fmt.Errorf("failed to save match %d: %w", match.MatchID, err)
+	}
+	if err := s.updateTeamStats(*existingMatch); err != nil {
+		return models.Match{}, fmt.Errorf("failed to update team stats for match %d: %w", match.MatchID, err)
+	}
+	return *existingMatch, nil
+
+}
+func (s *MatchService) setMatchWinner(match *models.Match) {
+	if match.HomeScore > match.AwayScore {
+		match.Result = &match.HomeTeamID
+	} else if match.AwayScore > match.HomeScore {
+		match.Result = &match.AwayTeamID
+	} else {
+		match.Result = nil // Draw
+	}
 }

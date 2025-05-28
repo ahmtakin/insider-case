@@ -15,6 +15,7 @@ type IMatchRepository interface {
 	GetMatchesByLeagueIdAndWeek(leagueID uint, week int) ([]models.Match, error)
 	GetMatchesByLeagueId(leagueID uint) ([]models.Match, error)
 	SaveMatch(match models.Match) error
+	GetMatchByID(matchID uint) (*models.Match, error)
 }
 
 type MatchRepository struct {
@@ -155,4 +156,15 @@ func (r *MatchRepository) SaveMatch(match models.Match) error {
 	}
 
 	return nil
+}
+
+func (r *MatchRepository) GetMatchByID(matchID uint) (*models.Match, error) {
+	var match models.Match
+	if err := r.db.First(&match, matchID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, fmt.Errorf("match with ID %d not found", matchID)
+		}
+		return nil, fmt.Errorf("failed to get match by ID %d: %w", matchID, err)
+	}
+	return &match, nil
 }

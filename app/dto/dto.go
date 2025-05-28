@@ -30,4 +30,33 @@ type Week struct {
 	Week      int                `json:"week"`
 	Matches   []models.Match     `json:"matches,omitempty"`
 	TeamStats []models.TeamStats `json:"team_stats,omitempty"`
+	Champion  models.Team        `json:"champion,omitempty"`
+}
+
+type ChampionshipEstimation struct {
+	LeagueID   uint    `json:"league_id"`
+	Week       int     `json:"week"`
+	TeamID     uint    `json:"team_id"`
+	Estimation float32 `json:"estimation"`
+}
+type LeagueState struct {
+	LeagueID         uint               `json:"league_id"`
+	Week             int                `json:"week"`
+	Teams            []models.Team      `json:"teams"`
+	RemainingMatches []models.Match     `json:"matches"`
+	TeamStats        []models.TeamStats `json:"team_stats"`
+}
+type UserPlayedMatch struct {
+	LeagueID   uint `json:"league_id"`
+	Week       int  `json:"week"`
+	MatchID    uint `json:"match_id"`
+	HomeTeamID uint `json:"home_team_id"`
+	AwayTeamID uint `json:"away_team_id"`
+	HomeScore  int  `json:"home_score"`
+	AwayScore  int  `json:"away_score"`
+}
+type Champion struct {
+	TeamID   uint   `json:"team_id" gorm:"primaryKey"`
+	LeagueID uint   `json:"league_id" gorm:"primaryKey"`
+	TeamName string `json:"team_name"`
 }
