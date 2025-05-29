@@ -20,7 +20,7 @@ function generateTeamInputs() {
         teamInputsContainer.innerHTML += `
             <div class="team-input">
                 <label>Team Name: <input type="text" class="team-name" value="Team ${i + 1}" required></label>
-                <label>Strength: <input type="number" class="team-strength" value="1000" min="1000" max="3000" required></label>
+                <label>Strength (1000-3000): <input type="number" class="team-strength" value="1000" min="1000" max="3000" required></label>
             </div>`;
     }
 }
