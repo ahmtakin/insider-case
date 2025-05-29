@@ -37,7 +37,7 @@ func RegisterRoutes(r *mux.Router) {
 		matchService,
 	)
 
-	api := r.PathPrefix("/api").Subrouter()
+	api := mux.NewRouter().PathPrefix("/api").Subrouter()
 	api.HandleFunc("/leagues", leagueController.CreateLeague).Methods("POST")
 
 	api.HandleFunc("/teams/{leagueID}", teamController.GetTeamsByLeagueID).Methods("GET")
