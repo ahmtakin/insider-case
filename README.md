@@ -376,6 +376,97 @@ Since the main factor in game results is the team strength the results can be a 
 
 
 
+#### Additional Endpoint That may be useful for different cases
+
+##### Get Teams by League ID - GET /teams/{leagueID}
+```bash
+curl -X GET http://localhost:8081/api/teams/17
+```
+```json
+[
+    {
+        "id": 65,
+        "league_id": 17,
+        "name": "Fenerbahçe",
+        "strength": 2000,
+        "stats": {
+            "team_id": 0,
+            "points": 0,
+            "played": 0,
+            "won": 0,
+            "lost": 0,
+            "draw": 0,
+            "goals_for": 0,
+            "goals_against": 0,
+            "goal_diff": 0,
+            "estimation": 0
+        }
+    }...
+]
+```
+##### Get Matches by League ID and week - GET /matches/{leagueID}/{week}
+
+```bash
+curl -X GET http://localhost:8081/api/matches/17/2
+```
+```json
+[
+    {
+        "id": 195,
+        "league_id": 17,
+        "week": 2,
+        "played": true,
+        "home_team": 67,
+        "away_team": 65,
+        "home_score": 2,
+        "away_score": 3
+    },...
+]
+```
+
+##### Get All Matches By League ID - GET /matches/{leagueID}
+```bash
+curl -X GET http://localhost:8081/api/matches/17
+```
+```json
+[
+    {
+        "id": 201,
+        "league_id": 17,
+        "week": 5,
+        "played": false,
+        "home_team": 65,
+        "away_team": 67,
+        "home_score": 0,
+        "away_score": 0
+    }...
+]
+
+```
+
+##### Get Championship Estimations by LeagueID - GET /leagues/championship-estimations?{leagueID}
+```bash
+curl -X GET http://localhost:8081/api/leagues/championship-estimations?leagueID=1
+```
+```json
+[
+    {
+        "league_id": 17,
+        "week": 5,
+        "team_id": 65,
+        "estimation": 0.0518
+    },
+    {
+        "league_id": 17,
+        "week": 5,
+        "team_id": 66,
+        "estimation": 0.8756
+    }...
+]
+
+```
+
+
 
 
 
