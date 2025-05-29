@@ -48,6 +48,8 @@ func RegisterRoutes(r *mux.Router) {
 	api.HandleFunc("/leagues/user-play-week", leagueController.UserPlayWeek).Methods("POST")
 	api.HandleFunc("/leagues/championship-estimations", leagueController.GetChampionshipEstimations).Methods("GET")
 
+	r.PathPrefix("/api").Handler(enableCORS(api))
+
 	fileServer := uiFileServer()
 	r.PathPrefix("/").Handler(fileServer)
 
@@ -70,4 +72,19 @@ func uiFileServer() http.Handler {
 		fs.ServeHTTP(w, r)
 	})
 	return fileServer
+}
+
+func enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*") // Replace '*' with specific domain in production
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }

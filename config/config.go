@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	os "os"
 
 	"github.com/joho/godotenv"
@@ -19,8 +20,11 @@ type DBConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		return nil, err
+
+	if os.Getenv("ENV") != "production" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("Warning: No .env file found (this is expected in production)")
+		}
 	}
 
 	config := &Config{

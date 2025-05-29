@@ -43,7 +43,7 @@ leagueForm.addEventListener('submit', async (e) => {
         strength: parseInt(teamStrengths[idx].value)
     }));
 
-    const res = await fetch('http://localhost:8081/api/leagues', {
+    const res = await fetch('https://insider-case.onrender.com/api/leagues', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ name, team_count: teams.length, teams })
@@ -142,7 +142,7 @@ function renderNextWeekMatches(matches, champion) {
 }
 
 document.getElementById('simulate-week').addEventListener('click', async () => {
-    const res = await fetch('http://localhost:8081/api/leagues/simulate-week', {
+    const res = await fetch('https://insider-case.onrender.com/api/leagues/simulate-week', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ leagueID: currentLeague.id })
@@ -160,7 +160,7 @@ function mergeStats(teams, stats) {
 }
 
 document.getElementById('play-all').addEventListener('click', async () => {
-    const res = await fetch('http://localhost:8081/api/leagues/play-remaining-matches', {
+    const res = await fetch('https://insider-case.onrender.com/api/leagues/play-remaining-matches', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ leagueID: currentLeague.id })
@@ -229,7 +229,7 @@ document.getElementById('manual-week-form').addEventListener('submit', async (e)
         };
     });
 
-    const res = await fetch('http://localhost:8081/api/leagues/user-play-week', {
+    const res = await fetch('https://insider-case.onrender.com/api/leagues/user-play-week', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(results)
